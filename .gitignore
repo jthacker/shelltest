@@ -1,0 +1,5 @@
+*.swp
+*.pyc
+.cache
+.eggs
+shelltest.egg-info/
