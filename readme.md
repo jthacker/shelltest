@@ -7,7 +7,7 @@ Tests are simple shell like scripts that check their output against the expected
 
 ## Install
 ```
-$ pip install git+git://github.com/jthacker/shelltest.git@v0.0.2#egg=shelltest
+$ pip install shelltest
 ```
 
 ## Usage
