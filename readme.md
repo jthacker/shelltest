@@ -1,3 +1,5 @@
+[![Build Status](https://travis-ci.org/jthacker/shelltest.svg?branch=master)](https://travis-ci.org/jthacker/shelltest)
+
 # shelltest: command line program tester
 Shelltest is a simple and compact method for testing command line programs.
 Tests are simple shell like scripts that check their output against the expected output.
@@ -5,7 +7,7 @@ Tests are simple shell like scripts that check their output against the expected
 
 ## Install
 ```
-$ pip install shelltest
+$ pip install git+git://github.com/jthacker/shelltest.git@v0.0.2#egg=shelltest
 ```
 
 ## Usage
