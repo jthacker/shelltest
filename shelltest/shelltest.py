@@ -16,8 +16,9 @@ ShellTestResult = namedtuple('ShellTestResult',
 
 
 class ShellTestConfig(object):
-    prompt = '>'
-    shell_test_exts = ('sh', 'shtest')
+    def __init__(self):
+        self.prompt = '>'
+        self.shell_test_exts = ('sh', 'shtest')
 
 
 class ShellTestFileFinder(object):
@@ -33,7 +34,7 @@ class ShellTestFileFinder(object):
         cfg : ShellTestConfig
         """
         self._paths = paths
-        self._cfg = cfg or ShellTestConfig
+        self._cfg = cfg or ShellTestConfig()
 
     @classmethod
     def is_shelltest_file(cls, path, cfg):
@@ -112,7 +113,7 @@ class ShellTestParser(object):
             fobj = path
         self._fobj = fobj
         self._path = str(path)
-        self._cfg = cfg or ShellTestConfig
+        self._cfg = cfg or ShellTestConfig()
 
     def parse(self):
         """Parser path for tests
