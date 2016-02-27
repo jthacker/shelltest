@@ -1,6 +1,7 @@
 from __future__ import print_function
 
 from collections import defaultdict, MutableMapping, namedtuple
+import difflib
 import itertools
 import logging
 import os
@@ -353,7 +354,22 @@ class ShellTestResultsFormatter(object):
                 yield r
 
     @classmethod
-    def format_result(cls, result):
+    def diff(cls, expected, actual, indent):
+        out = []
+        for line in difflib.unified_diff(expected.split('\n'), actual.split('\n'), 'expected', 'actual', lineterm=''):
+            out.append(line)
+        out = out[:1] + [(' '*indent) + line for line in out[1:]]
+        return '\n'.join(out)
+
+    @classmethod
+    def trunc(cls, a, max_len):
+        ellipsis = ' ...'
+        if len(a) > max_len:
+            return a[:(max_len - len(ellipsis))] + ellipsis
+        return a
+
+    @classmethod
+    def format_result(cls, result, output_max_len=80):
         if result.status.success:
             return 'command completed successfully'
         reason = 'unexpected output' if result.status.ret_code_verified else 'non-zero return code'
@@ -361,18 +377,22 @@ class ShellTestResultsFormatter(object):
             'Command failed due to {reason}',
             '     file: {path}:{line_num}',
             '      cmd: {cmd!r}',
-            '   actual: {actual!r}',
-            ' expected: {expect!r}',
             '  retcode: {rc}',
+            ' expected: {expected!r}',
+            '   actual: {actual!r}',
+            '     diff: {diff}',
         )
-
+        diff_indent = 11 # start of {diff} in msg
+        expected = result.test.expected_output
+        actual = result.actual_output
         return '\n'.join(msg).format(reason=reason,
                                      cmd=result.test.command,
-                                     expect=result.test.expected_output,
-                                     actual=result.actual_output,
+                                     expected=cls.trunc(expected, output_max_len),
+                                     actual=cls.trunc(actual, output_max_len),
                                      rc=result.ret_code,
                                      path=result.test.source.name,
-                                     line_num=result.test.source.line_num)
+                                     line_num=result.test.source.line_num,
+                                     diff=cls.diff(expected, actual, diff_indent))
 
     def format(self):
         """Return a string of formatted results"""

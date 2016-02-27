@@ -2,8 +2,9 @@
 
 # shelltest: command line program tester
 Shelltest is a simple and compact method for testing command line programs.
-Tests are simple shell like scripts that check their output against the expected output.
-
+Tests are simple shell like scripts a command prompt that executes a command and
+its expected output. The `shelltest` utility compares the actual output of each
+command to the expected output, failing tests where the do not match.
 
 ## Install
 ```bash
@@ -21,13 +22,13 @@ An example shell test file
 0
 ```
 
-Running tests with shelltest command
+### Running tests with shelltest command
 ```bash
 $ shelltest doc/examples/simple.sh
 doc/examples/simple.sh 2 of 2 (100.0%) passed
 ```
 
-Running actual shell test files
+### Running a shell test file
 ```bash
 $ ./doc/examples/simple.sh
 ./doc/examples/simple.sh 2 of 2 (100.0%) passed
@@ -41,16 +42,16 @@ exec: 'echo $?' ... passed
 ./doc/examples/simple.sh 2 of 2 (100.0%) passed
 ```
 
-## UnitTest Usage
-Shelltests can also be run within your python project.
+### Unittests
 In a file that will be picked up by the projects test runner (e.g. nose, py.test),
 place the following.
 ```python
 from shelltest.unittest import create_unittests
-create_unittests('path/to/shell/tests')
+create_unittests('doc/examples/')
 ```
 `create_unittests` takes a path where shelltest files can be found.
-It then creates one TestCase for each shelltest file and a test method for each test in the file.
+One TestCase is created for each shelltest file and a test method for each test in the file.
+The `path` argument is taken relative to the file that `create_unittests` appears in.
 
 ## Shelltest files
 Shell test files can end in either .sh or .shtest
@@ -76,5 +77,4 @@ See `doc/examples/configuration_options.sh` for an example.
 
 
 # TODO
-* add error reporting that shows line numbers of the failing test
 * allow other types of comparison between actual and expected output
