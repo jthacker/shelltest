@@ -1,3 +1,4 @@
+#!! command_shell = bash -c
 > echo 1234
 1234
 > echo $?

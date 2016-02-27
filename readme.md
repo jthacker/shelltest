@@ -56,8 +56,8 @@ Available options:
 | Option                       | Type    | Description                                   | Default |
 | ---------------------------- | ------- | --------------------------------------------- | ------- |
 | `command_prompt`             | string  | Command delimiter                             | >       |
+| `command_shell`              | string  | Shell to run commands in                      | `sh -c` |
 | `ignore_trailing_whitespace` | boolean | Ignore trailing whitespace in expected output | true    |
-| `shell_command`              | string  | Shell to run commands in                      | `sh -c` |
 
 
 

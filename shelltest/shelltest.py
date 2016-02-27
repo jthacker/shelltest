@@ -47,7 +47,7 @@ class ShellTestConfig(MutableMapping):
     def __init__(self, shell_test_cfg=None):
         cfg = (
             opt('command_prompt', '>', True, str),
-            opt('shell_command', 'sh -c', True, str),
+            opt('command_shell', 'sh -c', True, str),
             opt('ignore_trailing_whitespace', True, True, bool_typ),
             opt('shell_test_exts', ('sh', 'shtest'), False, list))
         self.__dict__['_cfg'] = { op.name:op for op in cfg }
@@ -294,7 +294,7 @@ class ShellTestRunner(object):
         return ShellTestResultStatus(rc_verified and out_verified, out_verified, rc_verified)
 
     def get_command(self, test):
-        return shlex.split(self._cfg.shell_command) + [test.command]
+        return shlex.split(self._cfg.command_shell) + [test.command]
 
     def execute(self, test):
         cwd = os.path.dirname(test.source.name)
