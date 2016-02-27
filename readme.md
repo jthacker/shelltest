@@ -48,6 +48,18 @@ up to but not including the nex '>', is considered the expected output.
 Each command is executed and the actual output is compared to the expected output.
 If they do not match exactly then the test is considered to have failed.
 
+### Configuration Options
+The header of a script file can contain configuration options that affect all tests in that file.
+Configuration options are of the format `#!! key = value`, with one per line and they must proceed test.
+Available options:
+
+| Option                       | Type    | Description                                   | Default |
+| ---------------------------- | ------- | --------------------------------------------- | ------- |
+| `command_prompt`             | string  | Command delimiter                             | >       |
+| `ignore_trailing_whitespace` | boolean | Ignore trailing whitespace in expected output | true    |
+| `shell_command`              | string  | Shell to run commands in                      | `sh -c` |
+
+
 
 # TODO
 * add error reporting that shows line numbers of the failing test

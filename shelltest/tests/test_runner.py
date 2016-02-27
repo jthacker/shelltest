@@ -4,11 +4,11 @@ import StringIO
 
 import pytest
 
-from shelltest.shelltest import ShellTest, ShellTestSource, ShellTestRunner
+from shelltest.shelltest import ShellTest, ShellTestSource, ShellTestRunner, ShellTestConfig
 
 
 def runner(tests):
-    tests = [ShellTest(cmd, output, ShellTestSource('', 0)) for cmd, output in tests]
+    tests = [ShellTest(cmd, output, ShellTestSource('', 0), ShellTestConfig()) for cmd, output in tests]
     return ShellTestRunner(tests)
 
 
@@ -31,6 +31,7 @@ def test_working_directory_is_scripts_directory():
     file_path = os.path.abspath(__file__)
     dir_path = os.path.dirname(file_path)
     expected = dir_path + '\n'
-    tests = [ShellTest("pwd", expected, ShellTestSource(file_path, 0))]
+    cfg = ShellTestConfig()
+    tests = [ShellTest("pwd", expected, ShellTestSource(file_path, 0), cfg)]
     r = next(ShellTestRunner(tests).run())
     assert r.status.success

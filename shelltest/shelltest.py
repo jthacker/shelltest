@@ -1,31 +1,86 @@
 from __future__ import print_function
 
-from collections import defaultdict, namedtuple
+from collections import defaultdict, MutableMapping, namedtuple
 import itertools
 import logging
 import os
+import re
+import shlex
 from subprocess import Popen, PIPE
 
 
 log = logging.getLogger(__name__)
 
-ShellTest = namedtuple('ShellTest', ('command', 'expected_output', 'source'))
+
+ShellTest = namedtuple('ShellTest', ('command', 'expected_output', 'source', 'cfg'))
+
 ShellTestSource = namedtuple('ShellTestSource', ('name', 'line_num'))
+
 ShellTestResultStatus = namedtuple('ShellTestResult', ('success', 'output_verified', 'ret_code_verified'))
+
 ShellTestResult = namedtuple('ShellTestResult',
                              ('test', 'actual_output', 'ret_code', 'status'))
 
+ShellTestConfigOption = namedtuple('ShellTestConfigOption', 'name,default,editable,typ')
 
-class ShellTestConfig(object):
-    def __init__(self):
-        # Prompt to indicate command input in a shell test file
-        self.prompt = '>'
 
-        # Shell test extensions to search for
-        self.shell_test_exts = ('sh', 'shtest')
+def opt(name, default, editable, typ):
+    return ShellTestConfigOption(name, default, editable, typ)
 
-        # Ignore trailing whitespace in expected output
-        self.ignore_trailing_whitespace = True
+
+class ShellTestOptionNotEditable(Exception):
+    pass
+
+
+def bool_typ(s):
+    s = s.lower()
+    if s == 'false':
+        return False
+    elif s == 'true':
+        return True
+    raise ValueError('invalid boolean value {!r}'.format(s))
+
+
+class ShellTestConfig(MutableMapping):
+    """ShellTestConfig"""
+
+    def __init__(self, shell_test_cfg=None):
+        cfg = (
+            opt('command_prompt', '>', True, str),
+            opt('shell_command', 'sh -c', True, str),
+            opt('ignore_trailing_whitespace', True, True, bool_typ),
+            opt('shell_test_exts', ('sh', 'shtest'), False, list))
+        self.__dict__['_cfg'] = { op.name:op for op in cfg }
+        self.__dict__['_vals'] = { op.name:op.default for op in cfg }
+        if shell_test_cfg is not None:
+            self.__dict__['_vals'] = dict(shell_test_cfg.iteritems())
+
+    def copy(self):
+        return ShellTestConfig(self)
+
+    def __len__(self):
+        return len(self._vals)
+
+    def __iter__(self):
+        return iter(self._vals)
+
+    def __getattr__(self, key):
+        return self[key]
+
+    def __setattr__(self, key, val):
+        self[key] = val
+
+    def __getitem__(self, key):
+        return self._vals[key]
+
+    def __setitem__(self, key, val):
+        op = self._cfg[key]
+        if not op.editable:
+            raise ShellTestOptionNotEditable('{!r} is not an editable option'.format(key))
+        self._vals[key] = op.typ(val)
+
+    def __delitem__(self, key):
+        raise NotImplemented()
 
 
 class ShellTestFileFinder(object):
@@ -84,28 +139,100 @@ class ShellTestFileFinder(object):
                 yield file_path
 
 
+class TestConfig(object):
+    def __init__(self, cmd, cmd_line_num, output, cfg):
+        self.cmd = cmd
+        self.cmd_line_num = cmd_line_num
+        self.output = output
+        self.cfg = cfg
+
+
+class ParserFSM(object):
+    _re_arg = re.compile(r'#!!\s*([a-zA-Z0-9_]+)\s*=\s*(.+?)\s*$')
+    _re_cmt = re.compile(r'^\s*#.*$')
+
+    def __init__(self, cfg):
+        self._state = self._state_parse_header
+        self._line = None
+        self._line_num = None
+        self._test = None
+        self._cfg = cfg
+        self._tests = []
+        self._errors = []
+
+    def _get_command(self, line):
+        idx = line.find(self._cfg.command_prompt)
+        # command found
+        if idx == 0:
+            return line[idx+1:].strip()
+        return None
+
+    def _test_finished(self):
+        """finish any pending tests"""
+        if self._test:
+            self._tests.append(self._test)
+            self._test = None
+
+    def _parse_cmd(self):
+        """Check if line contains a command"""
+        cmd = self._get_command(self._line)
+        if cmd:
+            self._test_finished()
+            # Commands that are just comments are not considered tests
+            if not self._re_cmt.match(cmd):
+                self._test = TestConfig(cmd, self._line_num, [], self._cfg.copy())
+                return True
+        return False
+
+    def _parse_arg(self, match_start=False):
+        matcher = self._re_arg.match if match_start else self._re_arg.search
+        m = matcher(self._line)
+        if m:
+            return m.groups()
+
+    def _state_parse_header(self):
+        arg = self._parse_arg(match_start=True)
+        if arg:
+            key, val = arg
+            self._cfg[key] = val
+        elif self._parse_cmd():
+            self._state = self._state_parse_cmd
+
+    def _state_parse_cmd(self):
+        if not self._parse_cmd() and self._test:
+            self._test.output.append(self._line)
+
+    def finalize(self):
+        self._test_finished()
+
+    def next_line(self, line, line_num):
+        self._line = line
+        self._line_num = line_num
+        self._state()
+
+    @property
+    def tests(self):
+        return self._tests
+
+    @property
+    def errors(self):
+        return self._errors
+
+
 class ShellTestParser(object):
     """ShellTesetParser read in a ShellTest file"""
 
+    def _parse_args(self):
+        """Parse configuration arguments"""
+
     def _test_gen(self):
-        """Parse tests from a file like object given the specified configuration
-        Returns
-        =======
-        Generator of ShellTests
-        """
-        cmd, src = None, None
+        fsm = ParserFSM(self._cfg)
         for line_num, line in enumerate(self._fobj.readlines()):
-            idx = line.find(self._cfg.prompt)
-            if idx == 0:
-                if cmd:
-                    yield ShellTest(cmd, ''.join(out), src)
-                cmd = line[idx+1:].strip()
-                src = ShellTestSource(self._path, line_num)
-                out = []
-            elif cmd:
-                out.append(line)
-        if cmd:
-            yield ShellTest(cmd, ''.join(out), src)
+            fsm.next_line(line, line_num)
+        fsm.finalize()
+        for test in fsm.tests:
+            src = ShellTestSource(self._path, test.cmd_line_num)
+            yield ShellTest(test.cmd, ''.join(test.output), src, test.cfg)
 
     def __init__(self, path, cfg=None):
         """Initialize a ShellTestParser
@@ -145,6 +272,8 @@ class ShellTestRunner(object):
         self._cfg = cfg or ShellTestConfig()
 
     def check_output(self, expected_output, actual_output, cfg):
+        """Compare actual to expected output, comparison depends on the configuration
+        """
         if cfg.ignore_trailing_whitespace:
             N = len(actual_output)
             if len(expected_output) < N:
@@ -155,11 +284,25 @@ class ShellTestRunner(object):
         return (actual_output == expected_output)
 
     def get_status(self, test, actual_output, ret_code, cfg):
-        """Compare actual to expected output, comparison depends on the configuration
+        """Get the status of the command running, compares actual to expected output and the return code
+        Returns
+        =======
+        ShellTestResultStatus
         """
         rc_verified = (ret_code == 0)
         out_verified = self.check_output(test.expected_output, actual_output, cfg)
         return ShellTestResultStatus(rc_verified and out_verified, out_verified, rc_verified)
+
+    def get_command(self, test):
+        return shlex.split(self._cfg.shell_command) + [test.command]
+
+    def execute(self, test):
+        cwd = os.path.dirname(test.source.name)
+        if not os.path.isdir(cwd):
+            cwd = '.'
+        p = Popen(self.get_command(test), shell=False, stdout=PIPE, cwd=cwd)
+        actual_output, _ = p.communicate()
+        return actual_output, p.returncode
 
     def run_test(self, test):
         """Run a single shell test
@@ -172,12 +315,7 @@ class ShellTestRunner(object):
         =======
         The ShellTestResult of running test
         """
-        cwd = os.path.dirname(test.source.name)
-        if not os.path.isdir(cwd):
-            cwd = '.'
-        p = Popen(test.command, shell=True, stdout=PIPE, cwd=cwd)
-        actual_output, _ = p.communicate()
-        ret_code = p.returncode
+        actual_output, ret_code = self.execute(test)
         status = self.get_status(test, actual_output, ret_code, self._cfg)
         return ShellTestResult(test, actual_output, ret_code, status)
 
@@ -216,7 +354,7 @@ class ShellTestResultsFormatter(object):
     def format_result(cls, result):
         if result.status.success:
             return 'command completed successfully'
-        reason = 'non-zero return code' if result.status.ret_code_verified else 'unexpected output'
+        reason = 'unexpected output' if result.status.ret_code_verified else 'non-zero return code'
         msg = (
             'Command failed due to {reason}',
             '     file: {path}:{line_num}',
