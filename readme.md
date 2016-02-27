@@ -69,7 +69,7 @@ See `doc/examples/configuration_options.sh` for an example.
 | Option                       | Type    | Description                                   | Default |
 | ---------------------------- | ------- | --------------------------------------------- | ------- |
 | `command_prompt`             | string  | Command delimiter                             | >       |
-| `command_shell`              | string  | Shell to run commands in                      | `sh -c` |
+| `command_shell`              | string  | Shell to run commands in                      | sh -c   |
 | `ignore_trailing_whitespace` | boolean | Ignore trailing whitespace in expected output | true    |
 
 
