@@ -83,3 +83,15 @@ def test_command_shell_changed():
     p = ShellTestParser(fobj)
     tests = p.parse()
     assert tests[0].cfg.command_shell == 'bash -c'
+
+
+def test_command_prompt_changed():
+    fobj = StringIO.StringIO(
+        "#[sht] command_prompt = py>\n"\
+        "#[sht] command_shell = python -c\n"\
+        "py> print('hello')\n"\
+        "hello")
+    p = ShellTestParser(fobj)
+    tests = p.parse()
+    assert tests[0].cfg.command_prompt == 'py>'
+    assert tests[0].command == "print('hello')"

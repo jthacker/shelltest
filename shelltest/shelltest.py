@@ -162,10 +162,11 @@ class ParserFSM(object):
         self._errors = []
 
     def _get_command(self, line):
-        idx = line.find(self._cfg.command_prompt)
+        prompt = self._cfg.command_prompt
+        idx = line.find(prompt)
         # command found
         if idx == 0:
-            return line[idx+1:].strip()
+            return line[idx+len(prompt)+1:].strip()
         return None
 
     def _test_finished(self):

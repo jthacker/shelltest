@@ -41,10 +41,21 @@ exec: 'echo $?' ... passed
 ./doc/examples/simple.sh 2 of 2 (100.0%) passed
 ```
 
+## UnitTest Usage
+Shelltests can also be run within your python project.
+In a file that will be picked up by the projects test runner (e.g. nose, py.test),
+place the following.
+```python
+from shelltest.unittest import create_unittests
+create_unittests('path/to/shell/tests')
+```
+`create_unittests` takes a path where shelltest files can be found.
+It then creates one TestCase for each shelltest file and a test method for each test in the file.
+
 ## Shelltest files
 Shell test files can end in either .sh or .shtest
 Each line starting with a '>' is considered a command and all text following it,
-up to but not including the nex '>', is considered the expected output.
+up to but not including the next '>', is considered the expected output.
 Each command is executed and the actual output is compared to the expected output.
 If they do not match exactly then the test is considered to have failed.
 
@@ -63,5 +74,4 @@ Available options:
 
 # TODO
 * add error reporting that shows line numbers of the failing test
-* add py.test, unittest, nose test runner support
 * allow other types of comparison between actual and expected output
