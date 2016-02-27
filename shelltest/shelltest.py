@@ -11,14 +11,21 @@ log = logging.getLogger(__name__)
 
 ShellTest = namedtuple('ShellTest', ('command', 'expected_output', 'source'))
 ShellTestSource = namedtuple('ShellTestSource', ('name', 'line_num'))
+ShellTestResultStatus = namedtuple('ShellTestResult', ('success', 'output_verified', 'ret_code_verified'))
 ShellTestResult = namedtuple('ShellTestResult',
-                             ('test', 'actual_output', 'ret_code', 'success'))
+                             ('test', 'actual_output', 'ret_code', 'status'))
 
 
 class ShellTestConfig(object):
     def __init__(self):
+        # Prompt to indicate command input in a shell test file
         self.prompt = '>'
+
+        # Shell test extensions to search for
         self.shell_test_exts = ('sh', 'shtest')
+
+        # Ignore trailing whitespace in expected output
+        self.ignore_trailing_whitespace = True
 
 
 class ShellTestFileFinder(object):
@@ -33,6 +40,8 @@ class ShellTestFileFinder(object):
             containing shell tests
         cfg : ShellTestConfig
         """
+        if isinstance(paths, basestring):
+            paths = [paths]
         self._paths = paths
         self._cfg = cfg or ShellTestConfig()
 
@@ -115,6 +124,10 @@ class ShellTestParser(object):
         self._path = str(path)
         self._cfg = cfg or ShellTestConfig()
 
+    @property
+    def path(self):
+        return self._path
+
     def parse(self):
         """Parser path for tests
         Returns
@@ -127,31 +140,46 @@ class ShellTestParser(object):
 class ShellTestRunner(object):
     """ShellTestRunner"""
 
-    def __init__(self, tests):
-        self.tests = tests
+    def __init__(self, tests, cfg=None):
+        self.tests = list(tests)
+        self._cfg = cfg or ShellTestConfig()
 
-    def run_shell_test(self, shell_test, show_tests=False):
+    def check_output(self, expected_output, actual_output, cfg):
+        if cfg.ignore_trailing_whitespace:
+            N = len(actual_output)
+            if len(expected_output) < N:
+                return False
+            head, tail = expected_output[:N], expected_output[N:]
+            # tail should only be whitespace
+            return (tail.strip() == '') and (head == actual_output)
+        return (actual_output == expected_output)
+
+    def get_status(self, test, actual_output, ret_code, cfg):
+        """Compare actual to expected output, comparison depends on the configuration
+        """
+        rc_verified = (ret_code == 0)
+        out_verified = self.check_output(test.expected_output, actual_output, cfg)
+        return ShellTestResultStatus(rc_verified and out_verified, out_verified, rc_verified)
+
+    def run_test(self, test):
         """Run a single shell test
         Parameters
         ==========
-        shell_test : ShellTest
+        test : ShellTest
             Shell test to run
-        show_tests : bool
-            Print shell tests as they are executed
 
         Returns
         =======
-        The ShellTestResult of running shell_test
+        The ShellTestResult of running test
         """
-        if show_tests:
-            print('exec: {!r} ... '.format(shell_test.command), end='')
-        p = Popen(shell_test.command, shell=True, stdout=PIPE)
-        stdout, stderr = p.communicate()
-        success = (shell_test.expected_output == stdout)
-        if show_tests:
-            result_str = 'passed' if success else 'failed'
-            print(result_str)
-        return ShellTestResult(shell_test, stdout, p.returncode, success)
+        cwd = os.path.dirname(test.source.name)
+        if not os.path.isdir(cwd):
+            cwd = '.'
+        p = Popen(test.command, shell=True, stdout=PIPE, cwd=cwd)
+        actual_output, _ = p.communicate()
+        ret_code = p.returncode
+        status = self.get_status(test, actual_output, ret_code, self._cfg)
+        return ShellTestResult(test, actual_output, ret_code, status)
 
     def run(self, show_tests=False):
         """Run tests
@@ -162,40 +190,65 @@ class ShellTestRunner(object):
 
         Returns
         =======
-        An iterable of ShellTestResults
+        A generator of ShellTestResults
         """
-        return [self.run_shell_test(test, show_tests) for test in self.tests]
+        for test in self.tests:
+            if show_tests:
+                print('exec: {!r} ... '.format(test.command), end='')
+            res = self.run_test(test)
+            if show_tests:
+                print('passed' if res.status.success else 'failed')
+            yield res
 
 
 class ShellTestResultsFormatter(object):
     """ShellTestResultsFormatter"""
 
     def __init__(self, results):
-        self._results = results
+        self._results = list(results)
 
     def failed_tests(self):
         for r in self._results:
-            if not r.success:
+            if not r.status.success:
                 yield r
+
+    @classmethod
+    def format_result(cls, result):
+        if result.status.success:
+            return 'command completed successfully'
+        reason = 'non-zero return code' if result.status.ret_code_verified else 'unexpected output'
+        msg = (
+            'Command failed due to {reason}',
+            '     file: {path}:{line_num}',
+            '      cmd: {cmd!r}',
+            '   actual: {actual!r}',
+            ' expected: {expect!r}',
+            '  retcode: {rc}',
+        )
+
+        return '\n'.join(msg).format(reason=reason,
+                                     cmd=result.test.command,
+                                     expect=result.test.expected_output,
+                                     actual=result.actual_output,
+                                     rc=result.ret_code,
+                                     path=result.test.source.name,
+                                     line_num=result.test.source.line_num)
 
     def format(self):
         """Return a string of formatted results"""
         src_stats = defaultdict(list)
         for r in self._results:
             src_stats[r.test.source.name].append(r)
-
         out = []
         failed_cnt = 0
         for src, results in src_stats.iteritems():
             n = len(results)
-            p = sum(1 for r in results if r.success)
+            p = sum(1 for r in results if r.status.success)
             failed_cnt += n - p
             out.append('{} {} of {} ({:3.1f}%) passed'\
                        .format(src, p, n, 100 * p / float(n)))
-            for r in filter(lambda r: not r.success, results):
-                out.append(' failed: {!r}'.format(r.test.command))
-                out.append('     actual: {!r}'.format(r.actual_output))
-                out.append('   expected: {!r}'.format(r.test.expected_output))
+            for r in filter(lambda r: not r.status.success, results):
+                out.append(self.format_result(r))
         if failed_cnt:
             out.append('{} test(s) failed'.format(failed_cnt))
         return '\n'.join(out)

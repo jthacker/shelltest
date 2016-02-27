@@ -1,3 +1,4 @@
+import os
 import tempfile
 import StringIO
 
@@ -14,11 +15,22 @@ def runner(tests):
 @pytest.mark.parametrize("cmd,output,ret_code,success", (
     ('echo hello', 'hello\n', 0, True),
     ('echo $?', '0\n', 0, True),
-    ('exit 42', '', 42, True)))
+    ('awk \'BEGIN { printf "%s", "asdf" }\'', 'asdf', 0, True),
+    ('exit 42', '', 42, False),
+    ('echo asdf', 'asdf\n\n\n', 0, True),
+))
 def test_echo(cmd, output, ret_code, success):
     r = runner([(cmd, output)])
-    res = r.run()[0]
-    assert res.success == success
+    res = next(r.run())
     assert res.ret_code == ret_code
+    assert res.status.success == success
     assert res.test == r.tests[0]
-    assert res.actual_output == output
+
+
+def test_working_directory_is_scripts_directory():
+    file_path = os.path.abspath(__file__)
+    dir_path = os.path.dirname(file_path)
+    expected = dir_path + '\n'
+    tests = [ShellTest("pwd", expected, ShellTestSource(file_path, 0))]
+    r = next(ShellTestRunner(tests).run())
+    assert r.status.success
