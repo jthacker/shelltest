@@ -50,7 +50,7 @@ If they do not match exactly then the test is considered to have failed.
 
 ### Configuration Options
 The header of a script file can contain configuration options that affect all tests in that file.
-Configuration options are of the format `#!! key = value`, with one per line and they must proceed test.
+Configuration options are of the format `#[sht] key = value`, with one per line and they must proceed test.
 Available options:
 
 | Option                       | Type    | Description                                   | Default |

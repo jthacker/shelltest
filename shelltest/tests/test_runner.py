@@ -4,7 +4,7 @@ import StringIO
 
 import pytest
 
-from shelltest.shelltest import ShellTest, ShellTestSource, ShellTestRunner, ShellTestConfig
+from shelltest.shelltest import ShellTest, ShellTestSource, ShellTestRunner, ShellTestConfig, ShellTestParser
 
 
 def runner(tests):
@@ -35,3 +35,14 @@ def test_working_directory_is_scripts_directory():
     tests = [ShellTest("pwd", expected, ShellTestSource(file_path, 0), cfg)]
     r = next(ShellTestRunner(tests).run())
     assert r.status.success
+
+
+def test_command_shell_changed():
+    fobj = StringIO.StringIO(
+    "#[sht] command_shell = bash -c\n"\
+    "> echo $0\n"\
+    "bash\n")
+    p = ShellTestParser(fobj)
+    tests = p.parse()
+    r = next(ShellTestRunner(tests).run())
+    assert r.actual_output == 'bash\n'

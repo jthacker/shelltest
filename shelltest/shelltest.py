@@ -53,7 +53,8 @@ class ShellTestConfig(MutableMapping):
         self.__dict__['_cfg'] = { op.name:op for op in cfg }
         self.__dict__['_vals'] = { op.name:op.default for op in cfg }
         if shell_test_cfg is not None:
-            self.__dict__['_vals'] = dict(shell_test_cfg.iteritems())
+            for key, val in shell_test_cfg.iteritems():
+                self.__dict__['_vals'][key] = val
 
     def copy(self):
         return ShellTestConfig(self)
@@ -148,7 +149,7 @@ class TestConfig(object):
 
 
 class ParserFSM(object):
-    _re_arg = re.compile(r'#!!\s*([a-zA-Z0-9_]+)\s*=\s*(.+?)\s*$')
+    _re_arg = re.compile(r'#\[sht\]\s*([a-zA-Z0-9_]+)\s*=\s*(.+?)\s*$')
     _re_cmt = re.compile(r'^\s*#.*$')
 
     def __init__(self, cfg):
@@ -249,7 +250,7 @@ class ShellTestParser(object):
             fobj = path
         self._fobj = fobj
         self._path = str(path)
-        self._cfg = cfg or ShellTestConfig()
+        self._cfg = ShellTestConfig(cfg or {})
 
     @property
     def path(self):
@@ -267,9 +268,8 @@ class ShellTestParser(object):
 class ShellTestRunner(object):
     """ShellTestRunner"""
 
-    def __init__(self, tests, cfg=None):
+    def __init__(self, tests):
         self.tests = list(tests)
-        self._cfg = cfg or ShellTestConfig()
 
     def check_output(self, expected_output, actual_output, cfg):
         """Compare actual to expected output, comparison depends on the configuration
@@ -283,18 +283,18 @@ class ShellTestRunner(object):
             return (tail.strip() == '') and (head == actual_output)
         return (actual_output == expected_output)
 
-    def get_status(self, test, actual_output, ret_code, cfg):
+    def get_status(self, test, actual_output, ret_code):
         """Get the status of the command running, compares actual to expected output and the return code
         Returns
         =======
         ShellTestResultStatus
         """
         rc_verified = (ret_code == 0)
-        out_verified = self.check_output(test.expected_output, actual_output, cfg)
+        out_verified = self.check_output(test.expected_output, actual_output, test.cfg)
         return ShellTestResultStatus(rc_verified and out_verified, out_verified, rc_verified)
 
     def get_command(self, test):
-        return shlex.split(self._cfg.command_shell) + [test.command]
+        return shlex.split(test.cfg.command_shell) + [test.command]
 
     def execute(self, test):
         cwd = os.path.dirname(test.source.name)
@@ -316,7 +316,7 @@ class ShellTestRunner(object):
         The ShellTestResult of running test
         """
         actual_output, ret_code = self.execute(test)
-        status = self.get_status(test, actual_output, ret_code, self._cfg)
+        status = self.get_status(test, actual_output, ret_code)
         return ShellTestResult(test, actual_output, ret_code, status)
 
     def run(self, show_tests=False):

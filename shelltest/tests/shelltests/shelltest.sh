@@ -22,4 +22,4 @@ optional arguments:
 
 
 > shelltest simple.sh
-simple.sh 4 of 4 (100.0%) passed
+simple.sh 5 of 5 (100.0%) passed

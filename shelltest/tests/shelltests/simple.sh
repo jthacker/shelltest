@@ -1,4 +1,7 @@
-#!! command_shell = bash -c
+#!/usr/bin/env shelltest
+#[sht] command_shell = bash -c
+> echo $0
+bash
 > echo 1234
 1234
 > echo $?

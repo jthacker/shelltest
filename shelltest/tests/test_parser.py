@@ -47,16 +47,16 @@ def test_parser_stringio(script):
 
 def test_header_config():
     fobj = StringIO.StringIO(
-        "#!! command_prompt = asdf\n"\
-        "#!! ignore_trailing_whitespace = False")
+        "#[sht] command_prompt = asdf\n"\
+        "#[sht] ignore_trailing_whitespace = False")
     p = ShellTestParser(fobj)
     p.parse()
     assert p._cfg.command_prompt == 'asdf'
     assert p._cfg.ignore_trailing_whitespace == False
 
     fobj = StringIO.StringIO(
-        "#!! command_prompt = a b c d\n"\
-        "#!! ignore_trailing_whitespace = true")
+        "#[sht] command_prompt = a b c d\n"\
+        "#[sht] ignore_trailing_whitespace = true")
     p = ShellTestParser(fobj)
     p.parse()
     assert p._cfg.command_prompt == 'a b c d'
@@ -73,3 +73,13 @@ def test_ignore_comments():
     p = ShellTestParser(fobj)
     tests = p.parse()
     assert len(tests) == 2
+
+
+def test_command_shell_changed():
+    fobj = StringIO.StringIO(
+        "#[sht] command_shell = bash -c\n"\
+        "> echo $0\n"\
+        "bash\n")
+    p = ShellTestParser(fobj)
+    tests = p.parse()
+    assert tests[0].cfg.command_shell == 'bash -c'
