@@ -2,4 +2,5 @@
 *.pyc
 .cache
 .eggs
+dist
 shelltest.egg-info/
