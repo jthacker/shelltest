@@ -78,6 +78,7 @@ class ShellTestConfig(MutableMapping):
         op = self._cfg[key]
         if not op.editable:
             raise ShellTestOptionNotEditable('{!r} is not an editable option'.format(key))
+        log.debug('setting cfg option %r to %r', key, val)
         self._vals[key] = op.typ(val)
 
     def __delitem__(self, key):

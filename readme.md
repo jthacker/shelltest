@@ -61,14 +61,17 @@ If they do not match exactly then the test is considered to have failed.
 
 ### Configuration Options
 The header of a script file can contain configuration options that affect all tests in that file.
-Configuration options are of the format `#[sht] key = value`, with one per line and they must proceed test.
-Available options:
+Configuration options are of the format `#[sht] key = value`, with one per line and they must proceed all tests.
+See `doc/examples/configuration_options.sh` for an example.
+
+#### Available options:
 
 | Option                       | Type    | Description                                   | Default |
 | ---------------------------- | ------- | --------------------------------------------- | ------- |
 | `command_prompt`             | string  | Command delimiter                             | >       |
 | `command_shell`              | string  | Shell to run commands in                      | `sh -c` |
 | `ignore_trailing_whitespace` | boolean | Ignore trailing whitespace in expected output | true    |
+
 
 
 
