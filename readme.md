@@ -6,13 +6,13 @@ Tests are simple shell like scripts that check their output against the expected
 
 
 ## Install
-```
+```bash
 $ pip install shelltest
 ```
 
 ## Usage
 Example test file:
-```
+```bash
 $ cat doc/examples/simple.sh
 #!/usr/bin/env shelltest
 > echo An example shell test file
@@ -22,19 +22,19 @@ An example shell test file
 ```
 
 Running tests with shelltest command
-```
+```bash
 $ shelltest doc/examples/simple.sh
 doc/examples/simple.sh 2 of 2 (100.0%) passed
 ```
 
 Running actual shell test files
-```
+```bash
 $ ./doc/examples/simple.sh
 ./doc/examples/simple.sh 2 of 2 (100.0%) passed
 ```
 
 Add --verbose to show actual test output
-```
+```bash
 $ ./doc/examples/simple.sh --verbose
 exec: 'echo An example shell test file' ... passed
 exec: 'echo $?' ... passed
