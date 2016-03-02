@@ -20,7 +20,7 @@ ShellTestSource = namedtuple('ShellTestSource', ('name', 'line_num'))
 ShellTestResultStatus = namedtuple('ShellTestResult', ('success', 'output_verified', 'ret_code_verified'))
 
 ShellTestResult = namedtuple('ShellTestResult',
-                             ('test', 'actual_output', 'ret_code', 'status'))
+                             ('test', 'actual_output', 'err_output', 'ret_code', 'status'))
 
 ShellTestConfigOption = namedtuple('ShellTestConfigOption', 'name,default,editable,typ')
 
@@ -303,9 +303,9 @@ class ShellTestRunner(object):
         cwd = os.path.dirname(test.source.name)
         if not os.path.isdir(cwd):
             cwd = '.'
-        p = Popen(self.get_command(test), shell=False, stdout=PIPE, cwd=cwd)
-        actual_output, _ = p.communicate()
-        return actual_output, p.returncode
+        p = Popen(self.get_command(test), shell=False, stdout=PIPE, stderr=PIPE, cwd=cwd)
+        actual_output, err_output = p.communicate()
+        return actual_output, err_output, p.returncode
 
     def run_test(self, test):
         """Run a single shell test
@@ -318,9 +318,9 @@ class ShellTestRunner(object):
         =======
         The ShellTestResult of running test
         """
-        actual_output, ret_code = self.execute(test)
+        actual_output, err_output, ret_code = self.execute(test)
         status = self.get_status(test, actual_output, ret_code)
-        return ShellTestResult(test, actual_output, ret_code, status)
+        return ShellTestResult(test, actual_output, err_output, ret_code, status)
 
     def run(self, show_tests=False):
         """Run tests
@@ -354,11 +354,10 @@ class ShellTestResultsFormatter(object):
                 yield r
 
     @classmethod
-    def diff(cls, expected, actual, indent):
+    def diff(cls, expected, actual):
         out = []
         for line in difflib.unified_diff(expected.split('\n'), actual.split('\n'), 'expected', 'actual', lineterm=''):
             out.append(line)
-        out = out[:1] + [(' '*indent) + line for line in out[1:]]
         return '\n'.join(out)
 
     @classmethod
@@ -369,11 +368,18 @@ class ShellTestResultsFormatter(object):
         return a
 
     @classmethod
+    def indent(cls, txt, width):
+        space = ' ' * width
+        out = txt.split('\n')
+        out = out[:1] + [space + line for line in out[1:]]
+        return '\n'.join(out)
+
+    @classmethod
     def format_result(cls, result, output_max_len=80):
         if result.status.success:
             return 'command completed successfully'
         reason = 'unexpected output' if result.status.ret_code_verified else 'non-zero return code'
-        msg = (
+        fmt = (
             'Command failed due to {reason}',
             '     file: {path}:{line_num}',
             '      cmd: {cmd!r}',
@@ -382,17 +388,20 @@ class ShellTestResultsFormatter(object):
             '   actual: {actual!r}',
             '     diff: {diff}',
         )
-        diff_indent = 11 # start of {diff} in msg
+        indent = 11 # start of {diff} in msg
         expected = result.test.expected_output
         actual = result.actual_output
-        return '\n'.join(msg).format(reason=reason,
-                                     cmd=result.test.command,
-                                     expected=cls.trunc(expected, output_max_len),
-                                     actual=cls.trunc(actual, output_max_len),
-                                     rc=result.ret_code,
-                                     path=result.test.source.name,
-                                     line_num=result.test.source.line_num,
-                                     diff=cls.diff(expected, actual, diff_indent))
+        msg = '\n'.join(fmt).format(reason=reason,
+                                    cmd=result.test.command,
+                                    expected=cls.trunc(expected, output_max_len),
+                                    actual=cls.trunc(actual, output_max_len),
+                                    rc=result.ret_code,
+                                    path=result.test.source.name,
+                                    line_num=result.test.source.line_num,
+                                    diff=cls.indent(cls.diff(expected, actual), indent))
+        if result.err_output:
+            msg += ('\n   stderr: {stderr}'.format(stderr=cls.indent(result.err_output, indent)))
+        return msg
 
     def format(self):
         """Return a string of formatted results"""
