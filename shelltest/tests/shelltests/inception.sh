@@ -1,7 +1,7 @@
 #!/usr/bin/env shelltest
 # self test shelltest
 > shelltest --version 2>&1  # python module argparse prints --version to stderr in 2.7
-shelltest (0.3.3)
+shelltest (0.3.4)
 
 > shelltest; echo $?
 2
