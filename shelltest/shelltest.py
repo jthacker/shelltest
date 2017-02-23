@@ -274,16 +274,18 @@ class ShellTestRunner(object):
     def __init__(self, tests):
         self.tests = list(tests)
 
+    def _strip_whitespace(self, string):
+        for line in string.split('\n'):
+            line = line.strip()
+            if line:
+                yield line
+
     def check_output(self, expected_output, actual_output, cfg):
         """Compare actual to expected output, comparison depends on the configuration
         """
         if cfg.ignore_trailing_whitespace:
-            N = len(actual_output)
-            if len(expected_output) < N:
-                return False
-            head, tail = expected_output[:N], expected_output[N:]
-            # tail should only be whitespace
-            return (tail.strip() == '') and (head == actual_output)
+            return tuple(self._strip_whitespace(actual_output)) \
+                    == tuple(self._strip_whitespace(expected_output))
         return (actual_output == expected_output)
 
     def get_status(self, test, actual_output, ret_code):
@@ -356,7 +358,11 @@ class ShellTestResultsFormatter(object):
     @classmethod
     def diff(cls, expected, actual):
         out = []
-        for line in difflib.unified_diff(expected.split('\n'), actual.split('\n'), 'expected', 'actual', lineterm=''):
+        for line in difflib.unified_diff(expected.split('\n'),
+                                         actual.split('\n'),
+                                         'expected',
+                                         'actual',
+                                         lineterm=''):
             out.append(line)
         return '\n'.join(out)
 
