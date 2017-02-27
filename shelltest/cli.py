@@ -13,6 +13,8 @@ description = """shelltest runner"""
 P = Parser("shelltest", description,
     Arg('--debug', 'enable verbose logging', action='store_true'),
     Arg('--verbose', 'show tests', action='store_true'),
+    Arg('--show-output', 'show output from each test as it is run',
+        action='store_true'),
     Arg('--version', 'show version', action='version',
         version='%(prog)s ({})'.format(__version__)),
     Arg('paths', 'shell test file paths', nargs='+', metavar='path'))
@@ -23,7 +25,9 @@ def main():
     if args.ns.debug:
         logging.getLogger().setLevel(logging.DEBUG)
         logging.basicConfig()
-    results, fmt, failed_tests = run(args.ns.paths, args.ns.verbose)
+    results, fmt, failed_tests = run(args.ns.paths,
+                                     show_tests=args.ns.verbose or args.ns.show_output,
+                                     show_output=args.ns.show_output)
     print(fmt.format())
     if failed_tests:
         sys.exit(1)

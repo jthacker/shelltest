@@ -298,38 +298,53 @@ class ShellTestRunner(object):
         out_verified = self.check_output(test.expected_output, actual_output, test.cfg)
         return ShellTestResultStatus(rc_verified and out_verified, out_verified, rc_verified)
 
-    def get_command(self, test):
+    def _get_command(self, test):
         return shlex.split(test.cfg.command_shell) + [test.command]
 
-    def execute(self, test):
+    def _execute(self, test, show_output):
         cwd = os.path.dirname(test.source.name)
         if not os.path.isdir(cwd):
             cwd = '.'
-        p = Popen(self.get_command(test), shell=False, stdout=PIPE, stderr=PIPE, cwd=cwd)
-        actual_output, err_output = p.communicate()
+        p = Popen(self._get_command(test), shell=False, stdout=PIPE, stderr=PIPE, cwd=cwd)
+        stdout = []
+        while p.poll() is None:
+            line = p.stdout.readline()
+            if show_output:
+                print('>>> ' + line.strip())
+            stdout.append(line)
+        line = p.stdout.read()
+        if show_output:
+            print('>>> ' + line.strip())
+        stdout.append(line)
+        actual_output = ''.join(stdout)
+        err_output = p.stderr.read()
         return actual_output, err_output, p.returncode
 
-    def run_test(self, test):
+    def run_test(self, test, show_output=False):
         """Run a single shell test
         Parameters
         ==========
         test : ShellTest
             Shell test to run
+        show_output : bool (default: False)
+            Show output from a command while it is running
 
         Returns
         =======
         The ShellTestResult of running test
         """
-        actual_output, err_output, ret_code = self.execute(test)
+        actual_output, err_output, ret_code = self._execute(test, show_output)
         status = self.get_status(test, actual_output, ret_code)
         return ShellTestResult(test, actual_output, err_output, ret_code, status)
 
-    def run(self, show_tests=False):
+    def run(self, show_tests=False, show_output=False):
         """Run tests
         Parameters
-        ======
-        show_tests : bool
+        ==========
+        show_tests : bool (default: False)
             display tests as they are executed
+        show_output : bool (default: False)
+            Show output from a command while it is running
 
         Returns
         =======
@@ -337,8 +352,9 @@ class ShellTestRunner(object):
         """
         for test in self.tests:
             if show_tests:
-                print('exec: {!r} ... '.format(test.command), end='')
-            res = self.run_test(test)
+                end = '\n' if show_output else ''
+                print('exec: {!r} ... '.format(test.command), end=end)
+            res = self.run_test(test, show_output)
             if show_tests:
                 print('passed' if res.status.success else 'failed')
             yield res
@@ -429,11 +445,11 @@ class ShellTestResultsFormatter(object):
         return '\n'.join(out)
 
 
-def run(paths, show_tests=False):
+def run(paths, show_tests=False, show_output=False):
     finder = ShellTestFileFinder(paths)
     parsers = [ShellTestParser(p) for p in finder.find_paths()]
     tests = list(itertools.chain.from_iterable(p.parse() for p in parsers))
     runner = ShellTestRunner(tests)
-    results = runner.run(show_tests)
+    results = runner.run(show_tests, show_output)
     fmt = ShellTestResultsFormatter(results)
     return results, fmt, sum(1 for _ in fmt.failed_tests())

@@ -39,8 +39,8 @@ def test_working_directory_is_scripts_directory():
 
 def test_command_shell_changed():
     fobj = StringIO.StringIO(
-    "#[sht] command_shell = bash -c\n"\
-    "> echo $0\n"\
+    "#[sht] command_shell = bash -c\n"
+    "> echo $0\n"
     "bash\n")
     p = ShellTestParser(fobj)
     tests = p.parse()

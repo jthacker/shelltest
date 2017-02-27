@@ -7,19 +7,20 @@ shelltest (0.3.5)
 2
 
 > shelltest --help
-usage: shelltest [-h] [--debug] [--verbose] [--version] paths [paths ...]
+usage: shelltest [-h] [--debug] [--verbose] [--show-output] [--version]
+                 paths [paths ...]
 
 shelltest runner
 
 positional arguments:
-  paths       shell test file paths
+  paths          shell test file paths
 
 optional arguments:
-  -h, --help  show this help message and exit
-  --debug     enable verbose logging
-  --verbose   show tests
-  --version   show version
-
+  -h, --help     show this help message and exit
+  --debug        enable verbose logging
+  --verbose      show tests
+  --show-output  show output from each test as it is run
+  --version      show version
 
 > shelltest bash_shell.sh
 bash_shell.sh 5 of 5 (100.0%) passed
