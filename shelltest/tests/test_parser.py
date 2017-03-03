@@ -1,9 +1,11 @@
 import tempfile
-import StringIO
+from StringIO import StringIO
 
 import pytest
 
-from shelltest.shelltest import ShellTestParser, ShellTest, ShellTestSource, ShellTestConfig
+from shelltest.shelltest import (ShellTestParser, ShellTest,
+                                 ShellTestSource, ShellTestConfig,
+                                 is_escaped_newline)
 
 
 _script = """\
@@ -22,8 +24,8 @@ def script():
 
 def shell_tests(path, cfg):
     return [
-        ShellTest('echo hello', 'hello\n', ShellTestSource(str(path), 0), cfg),
-        ShellTest('echo $?', '0\n', ShellTestSource(str(path), 2), cfg)]
+        ShellTest('echo hello', 'hello\n', ShellTestSource(str(path), 1), cfg),
+        ShellTest('echo $?', '0\n', ShellTestSource(str(path), 3), cfg)]
 
 
 def test_parser_path(script):
@@ -40,13 +42,13 @@ def test_parser_file(script):
 
 def test_parser_stringio(script):
     cfg = ShellTestConfig()
-    file_like_obj = StringIO.StringIO(script.file.read())
+    file_like_obj = StringIO(script.file.read())
     p = ShellTestParser(file_like_obj)
     assert shell_tests(file_like_obj, cfg) == p.parse()
 
 
 def test_header_config():
-    fobj = StringIO.StringIO(
+    fobj = StringIO(
         "#[sht] command_prompt = asdf\n"\
         "#[sht] ignore_trailing_whitespace = False")
     p = ShellTestParser(fobj)
@@ -54,7 +56,7 @@ def test_header_config():
     assert p._cfg.command_prompt == 'asdf'
     assert p._cfg.ignore_trailing_whitespace == False
 
-    fobj = StringIO.StringIO(
+    fobj = StringIO(
         "#[sht] command_prompt = a b c d\n"\
         "#[sht] ignore_trailing_whitespace = true")
     p = ShellTestParser(fobj)
@@ -64,7 +66,7 @@ def test_header_config():
 
 
 def test_ignore_comments():
-    fobj = StringIO.StringIO(
+    fobj = StringIO(
         "> # Ignore this line\n"\
         "> echo Dont ignore this line\n"\
         "Dont ignore this line\n"\
@@ -76,7 +78,7 @@ def test_ignore_comments():
 
 
 def test_command_shell_changed():
-    fobj = StringIO.StringIO(
+    fobj = StringIO(
         "#[sht] command_shell = bash -c\n"\
         "> echo $0\n"\
         "bash\n")
@@ -86,7 +88,7 @@ def test_command_shell_changed():
 
 
 def test_command_prompt_changed():
-    fobj = StringIO.StringIO(
+    fobj = StringIO(
         "#[sht] command_prompt = py>\n"\
         "#[sht] command_shell = python -c\n"\
         "py> print('hello')\n"\
@@ -95,3 +97,23 @@ def test_command_prompt_changed():
     tests = p.parse()
     assert tests[0].cfg.command_prompt == 'py>'
     assert tests[0].command == "print('hello')"
+
+
+def test_multiline_command():
+    fobj = StringIO(
+        "> echo line1\\\n"
+        "line2\n"
+        "line1line2")
+    p = ShellTestParser(fobj)
+    tests = p.parse()
+    assert len(tests) == 1
+    assert tests[0].command == "echo line1\\\nline2"
+
+
+@pytest.mark.parametrize('line, expected', (
+    ('line\n', False),
+    ('line', False),
+    ('line\\\n', True),
+    ('line\\\\\n', False)))
+def test_is_escaped_newline(line, expected):
+    assert is_escaped_newline(line) == expected

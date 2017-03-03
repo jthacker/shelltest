@@ -223,20 +223,44 @@ class ParserFSM(object):
         return self._errors
 
 
+def is_escaped_newline(line):
+    """ Checks if the final newline in a string is escaped
+    Parameters
+    ----------
+    line : string
+        String that ends with a newline
+
+    Returns
+    -------
+    bool
+        True if the last newline in the string is escaped
+
+    Examples
+    --------
+    >>> is_escaped_newline("Line\n")
+    False
+    >>> is_escaped_newline("Line\\\n")
+    True
+    >>> is_escaped_newline("Line\\\\n")
+    False
+    >>> is_escaped_newline("Line")
+    False
+    """
+    if line[-1] != '\n':
+        return False
+    line = line[:-1]
+    cnt = 0
+    for c in reversed(line):
+        if c == '\\':
+            cnt += 1
+        else:
+            break
+    # An odd number of backslashes means the newline is escaped
+    return cnt % 2 == 1
+
+
 class ShellTestParser(object):
     """ShellTesetParser read in a ShellTest file"""
-
-    def _parse_args(self):
-        """Parse configuration arguments"""
-
-    def _test_gen(self):
-        fsm = ParserFSM(self._cfg)
-        for line_num, line in enumerate(self._fobj.readlines()):
-            fsm.next_line(line, line_num)
-        fsm.finalize()
-        for test in fsm.tests:
-            src = ShellTestSource(self._path, test.cmd_line_num)
-            yield ShellTest(test.cmd, ''.join(test.output), src, test.cfg)
 
     def __init__(self, path, cfg=None):
         """Initialize a ShellTestParser
@@ -266,6 +290,35 @@ class ShellTestParser(object):
         An iterable of ShellTest's found
         """
         return [t for t in self._test_gen()]
+
+    def _parse_args(self):
+        """Parse configuration arguments"""
+
+    def _gen_escaped_newlines(self):
+        lines = []
+        line_num = None
+        for i, l in enumerate(self._fobj, 1):
+            if is_escaped_newline(l):
+                line_num = i
+                lines.append(l)
+            elif lines:
+                lines.append(l)
+                yield line_num, ''.join(lines)
+                lines = []
+            else:
+                yield i, l
+        if lines:
+            yield line_num, ''.join(lines)
+
+    def _test_gen(self):
+        fsm = ParserFSM(self._cfg)
+        for line_num, line in self._gen_escaped_newlines():
+            fsm.next_line(line, line_num)
+        fsm.finalize()
+        for test in fsm.tests:
+            src = ShellTestSource(self._path, test.cmd_line_num)
+            yield ShellTest(test.cmd, ''.join(test.output), src, test.cfg)
+
 
 
 class ShellTestRunner(object):
