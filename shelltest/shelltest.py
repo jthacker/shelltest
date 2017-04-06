@@ -320,6 +320,15 @@ class ShellTestParser(object):
             yield ShellTest(test.cmd, ''.join(test.output), src, test.cfg)
 
 
+def _get_env():
+    """ Get an environment, only whitelisted variables are passed on """
+    whitelist = set(['PATH'])
+    env = {}
+    for key, val in os.environ.items():
+        if key in whitelist:
+            env[key] = val
+    return env
+
 
 class ShellTestRunner(object):
     """ShellTestRunner"""
@@ -358,7 +367,8 @@ class ShellTestRunner(object):
         cwd = os.path.dirname(test.source.name)
         if not os.path.isdir(cwd):
             cwd = '.'
-        p = Popen(self._get_command(test), shell=False, stdout=PIPE, stderr=PIPE, cwd=cwd)
+        p = Popen(self._get_command(test), shell=False, stdout=PIPE,
+                  stderr=PIPE, cwd=cwd, env=_get_env())
         stdout = []
         while p.poll() is None:
             line = p.stdout.readline()
