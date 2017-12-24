@@ -1,6 +1,14 @@
 from setuptools import setup
 from shelltest import __version__
 
+
+_extras = {
+    'test': [
+        'pytest'
+    ]
+}
+
+
 setup(name='shelltest',
       description='Shell tester',
       packages=['shelltest'],
@@ -11,9 +19,10 @@ setup(name='shelltest',
       author_email='thacker.jon@gmail.com',
       keywords=['shell', 'testing'],
       classifiers=[],
+      extras_require=_extras,
       install_requires=['terseparse'],
       setup_requires=['pytest-runner'],
-      tests_require=['pytest'],
+      tests_require=_extras['test'],
       entry_points = {
           'console_scripts': [
               'shelltest=shelltest.cli:main'

@@ -4,3 +4,4 @@
 .eggs
 dist
 shelltest.egg-info/
+.tox
