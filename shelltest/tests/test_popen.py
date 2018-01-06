@@ -10,10 +10,11 @@ import pytest
 def test_popen_with_shell_output(cmd, output):
     p = Popen(cmd, shell=True, stdout=PIPE)
     stdout, _ = p.communicate()
-    assert output == stdout
+    assert output == stdout.decode('utf-8')
 
 
 def test_popen_output():
-    p = Popen(['awk', r'BEGIN { printf "%s\n","1234" }'], shell=False, stdout=PIPE)
+    p = Popen(['awk', r'BEGIN { printf "%s\n","1234" }'], shell=False,
+              stdout=PIPE)
     stdout, _ = p.communicate()
-    assert stdout == '1234\n'
+    assert '1234\n' == stdout.decode('utf-8')

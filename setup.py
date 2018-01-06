@@ -20,7 +20,10 @@ setup(name='shelltest',
       keywords=['shell', 'testing'],
       classifiers=[],
       extras_require=_extras,
-      install_requires=['terseparse'],
+      install_requires=[
+          'terseparse',
+          'future>=0.16.0'
+      ],
       setup_requires=['pytest-runner'],
       tests_require=_extras['test'],
       entry_points = {

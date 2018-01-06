@@ -1,5 +1,8 @@
 from __future__ import print_function
 
+from builtins import str
+from past.builtins import basestring
+from builtins import object
 from collections import defaultdict, MutableMapping, namedtuple
 import difflib
 import itertools
@@ -54,7 +57,7 @@ class ShellTestConfig(MutableMapping):
         self.__dict__['_cfg'] = { op.name:op for op in cfg }
         self.__dict__['_vals'] = { op.name:op.default for op in cfg }
         if shell_test_cfg is not None:
-            for key, val in shell_test_cfg.iteritems():
+            for key, val in list(shell_test_cfg.items()):
                 self.__dict__['_vals'][key] = val
 
     def copy(self):
@@ -324,7 +327,7 @@ def _get_env():
     """ Get an environment, only whitelisted variables are passed on """
     whitelist = set(['PATH'])
     env = {}
-    for key, val in os.environ.items():
+    for key, val in list(os.environ.items()):
         if key in whitelist:
             env[key] = val
     return env
@@ -371,16 +374,16 @@ class ShellTestRunner(object):
                   stderr=PIPE, cwd=cwd, env=_get_env())
         stdout = []
         while p.poll() is None:
-            line = p.stdout.readline()
+            line = p.stdout.readline().decode('utf-8')
             if show_output:
                 print('>>> ' + line.strip())
             stdout.append(line)
-        line = p.stdout.read()
+        line = p.stdout.read().decode('utf-8')
         if show_output:
             print('>>> ' + line.strip())
         stdout.append(line)
         actual_output = ''.join(stdout)
-        err_output = p.stderr.read()
+        err_output = p.stderr.read().decode('utf-8')
         return actual_output, err_output, p.returncode
 
     def run_test(self, test, show_output=False):
@@ -495,13 +498,13 @@ class ShellTestResultsFormatter(object):
             src_stats[r.test.source.name].append(r)
         out = []
         failed_cnt = 0
-        for src, results in src_stats.iteritems():
+        for src, results in list(src_stats.items()):
             n = len(results)
             p = sum(1 for r in results if r.status.success)
             failed_cnt += n - p
             out.append('{} {} of {} ({:3.1f}%) passed'\
                        .format(src, p, n, 100 * p / float(n)))
-            for r in filter(lambda r: not r.status.success, results):
+            for r in [r for r in results if not r.status.success]:
                 out.append(self.format_result(r))
         if failed_cnt:
             out.append('{} test(s) failed'.format(failed_cnt))

@@ -1,4 +1,5 @@
 from __future__ import absolute_import
+from builtins import next
 import inspect
 import logging
 import os
@@ -70,7 +71,7 @@ def create_unittests(path, module=None):
     finder = ShellTestFileFinder(tests_path)
     parsers = [ShellTestParser(p) for p in finder.find_paths()]
     for p in parsers:
-        cls_name = get_class_name(p.path, tests_path)
+        cls_name = str(get_class_name(p.path, tests_path))
         cls_members = { get_test_name(test):new_test_method(test) for test in p.parse() }
         assert cls_name not in mod_dict, 'Duplicate class name created'
         log.debug('creating class %r with members %r', cls_name, cls_members)

@@ -1,6 +1,9 @@
+from future import standard_library
+standard_library.install_aliases()
+from builtins import next
 import os
 import tempfile
-import StringIO
+import io
 
 import pytest
 
@@ -12,12 +15,12 @@ def runner(tests):
     return ShellTestRunner(tests)
 
 
-@pytest.mark.parametrize("cmd,output,ret_code,success", (
-    ('echo hello', 'hello\n', 0, True),
-    ('echo $?', '0\n', 0, True),
-    ('awk \'BEGIN { printf "%s", "asdf" }\'', 'asdf', 0, True),
-    ('exit 42', '', 42, False),
-    ('echo asdf', 'asdf\n\n\n', 0, True),
+@pytest.mark.parametrize(u'cmd,output,ret_code,success', (
+    (u'echo hello', u'hello\n', 0, True),
+    (u'echo $?', u'0\n', 0, True),
+    (u'awk \'BEGIN { printf "%s", "asdf" }\'', u'asdf', 0, True),
+    (u'exit 42', u'', 42, False),
+    (u'echo asdf', u'asdf\n\n\n', 0, True),
 ))
 def test_echo(cmd, output, ret_code, success):
     r = runner([(cmd, output)])
@@ -32,17 +35,17 @@ def test_working_directory_is_scripts_directory():
     dir_path = os.path.dirname(file_path)
     expected = dir_path + '\n'
     cfg = ShellTestConfig()
-    tests = [ShellTest("pwd", expected, ShellTestSource(file_path, 0), cfg)]
+    tests = [ShellTest(u"pwd", expected, ShellTestSource(file_path, 0), cfg)]
     r = next(ShellTestRunner(tests).run())
     assert r.status.success
 
 
 def test_command_shell_changed():
-    fobj = StringIO.StringIO(
-    "#[sht] command_shell = bash -c\n"
-    "> echo $0\n"
-    "bash\n")
+    fobj = io.StringIO(
+    u"#[sht] command_shell = bash -c\n"
+    u"> echo $0\n"
+    u"bash\n")
     p = ShellTestParser(fobj)
     tests = p.parse()
     r = next(ShellTestRunner(tests).run())
-    assert r.actual_output == 'bash\n'
+    assert r.actual_output == u'bash\n'
