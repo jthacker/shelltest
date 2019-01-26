@@ -21,8 +21,7 @@ setup(name='shelltest',
       classifiers=[],
       extras_require=_extras,
       install_requires=[
-          'terseparse',
-          'future>=0.16.0'
+          'terseparse'
       ],
       setup_requires=['pytest-runner'],
       tests_require=_extras['test'],
@@ -30,6 +29,7 @@ setup(name='shelltest',
           'console_scripts': [
               'shelltest=shelltest.cli:main'
           ]},
+      python_requires='>=3',
       long_description="""
 How to Install
 --------------

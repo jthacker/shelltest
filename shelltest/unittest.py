@@ -1,5 +1,3 @@
-from __future__ import absolute_import
-from builtins import next
 import inspect
 import logging
 import os

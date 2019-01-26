@@ -1,9 +1,5 @@
-from __future__ import print_function
-
-from builtins import str
-from past.builtins import basestring
-from builtins import object
-from collections import defaultdict, MutableMapping, namedtuple
+from collections import defaultdict, namedtuple
+from collections.abc import MutableMapping
 import difflib
 import itertools
 import logging
@@ -89,7 +85,7 @@ class ShellTestConfig(MutableMapping):
         raise NotImplemented()
 
 
-class ShellTestFileFinder(object):
+class ShellTestFileFinder:
     """ShellTestFinder searches for shell tests in directories"""
 
     def __init__(self, paths, cfg=None):
@@ -101,7 +97,7 @@ class ShellTestFileFinder(object):
             containing shell tests
         cfg : ShellTestConfig
         """
-        if isinstance(paths, basestring):
+        if isinstance(paths, str):
             paths = [paths]
         self._paths = paths
         self._cfg = cfg or ShellTestConfig()
@@ -145,7 +141,7 @@ class ShellTestFileFinder(object):
                 yield file_path
 
 
-class TestConfig(object):
+class TestConfig:
     def __init__(self, cmd, cmd_line_num, output, cfg):
         self.cmd = cmd
         self.cmd_line_num = cmd_line_num
@@ -153,7 +149,7 @@ class TestConfig(object):
         self.cfg = cfg
 
 
-class ParserFSM(object):
+class ParserFSM:
     _re_arg = re.compile(r'#\[sht\]\s*([a-zA-Z0-9_]+)\s*=\s*(.+?)\s*$')
     _re_cmt = re.compile(r'^\s*#.*$')
 
@@ -262,7 +258,7 @@ def is_escaped_newline(line):
     return cnt % 2 == 1
 
 
-class ShellTestParser(object):
+class ShellTestParser:
     """ShellTesetParser read in a ShellTest file"""
 
     def __init__(self, path, cfg=None):
@@ -274,7 +270,7 @@ class ShellTestParser(object):
         cfg : ShellTestConfig
             configuration object
         """
-        if isinstance(path, basestring):
+        if isinstance(path, str):
             fobj = open(path)
         else:
             fobj = path
@@ -333,7 +329,7 @@ def _get_env():
     return env
 
 
-class ShellTestRunner(object):
+class ShellTestRunner:
     """ShellTestRunner"""
 
     def __init__(self, tests):
@@ -426,7 +422,7 @@ class ShellTestRunner(object):
             yield res
 
 
-class ShellTestResultsFormatter(object):
+class ShellTestResultsFormatter:
     """ShellTestResultsFormatter"""
 
     def __init__(self, results):
