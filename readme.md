@@ -7,11 +7,11 @@ its expected output. The `shelltest` utility compares the actual output of each
 command to the expected output, failing tests where the do not match.
 
 ## Audience
-While this tool can be used for shell based testing of tools written any language,
-the target audience is python based projects that wish to test their build artifacts inside of the
-standard unittest framework.
-For a more full featured shell-based testing tool not specifically targetting python project,
-see the [shelltestrunner project](https://github.com/simonmichael/shelltestrunner).
+While this tool can be used for shell-based testing of any program,
+it really targets python-based projects that wish to test their build artifacts
+through the standard unittest framework.
+For a more full featured shell-based testing tool, that doesn't specifically
+target python projects, see the [shelltestrunner project](https://github.com/simonmichael/shelltestrunner).
 
 ## Install
 ```bash
